@@ -18,6 +18,7 @@ hash_table_t* create_table(size_t min_size)
     table->min_size = min_size;
     table->size = min_size;
     table->filled_buckets = 0;
+    
     return table;
 }
 
