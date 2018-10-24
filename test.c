@@ -23,13 +23,15 @@ int main()
 {
     // create hash table
     hash_table_t *table = create_table(4);
+    const int nr_elem = 25000;
 
     // insert element
     time_t t;
     srand((unsigned) time(&t)); 
-    int keys[24000];
-    for (int i = 0; i < 24000; ++i) {
-        keys[i] = rand();
+    int keys[nr_elem];
+    for (int i = 0; i < nr_elem; ++i) {
+        //keys[i] = rand();
+        keys[i] = i;
         insert_element(table, keys[i], "value", 7);
     }
 
@@ -40,10 +42,9 @@ int main()
     printf("\n");
     
     // delete element 
-    for (int i = 0; i < 24000; ++i) {
+    for (int i = 0; i < nr_elem; ++i) {
         delete_element(table, keys[i]);
     }
-    print_table(table);
 
     // delete table
     delete_table(table);

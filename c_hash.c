@@ -5,18 +5,17 @@ static unsigned long hash(hkey_t key, unsigned long size)
     return key % size;
 } 
 
-hash_table_t* create_table(size_t min_size)
+hash_table_t* create_table(size_t size)
 {
-    if (!min_size) min_size = 128; 
+    if (!size) size = DEFAULT_SIZE; 
 
     hash_table_t *table = (hash_table_t*)malloc(sizeof(hash_table_t));
-    table->nodes = (node_t*)malloc(sizeof(node_t) * min_size);
-    for (size_t i = 0; i < min_size; ++i) {
+    table->nodes = (node_t*)malloc(sizeof(node_t) * size);
+    for (size_t i = 0; i < size; ++i) {
         table->nodes[i].data = NULL;
         table->nodes[i].next = NULL;
     }
-    table->min_size = min_size;
-    table->size = min_size;
+    table->size = size;
     table->filled_buckets = 0;
     
     return table;
@@ -25,10 +24,12 @@ hash_table_t* create_table(size_t min_size)
 void delete_table(hash_table_t *table)
 {
     for (hkey_t i = 0; i < table->size; ++i) {
-        node_t *node = &table->nodes[i];
+        node_t *node = table->nodes[i].next;
         while (node) {
             if (node->data) free(node->data);
-            node = node->next;
+            node_t *next = node->next;
+            free(node);
+            node = next;
         }
     }
 
@@ -38,29 +39,22 @@ void delete_table(hash_table_t *table)
 
 static void resize_table(hash_table_t *table, size_t new_size)
 {
-    node_t *old_nodes = table->nodes;
-    size_t old_size = table->size;
+    hash_table_t *new_table = create_table(new_size);
     
-    table->nodes = (node_t*)malloc(sizeof(node_t) * new_size);
-    for (size_t i = 0; i < new_size; ++i) {
-        table->nodes[i].data = NULL;
-        table->nodes[i].next = NULL;
-    }
-    table->size = new_size;
-    table->filled_buckets = 0;
-
-    for (hkey_t i = 0; i < old_size; ++i) {
-        node_t *node = old_nodes[i].next;
+    for (hkey_t i = 0; i < table->size; ++i) {
+        node_t *node = table->nodes[i].next;
         while (node) {
-            insert_element(table, node->key, node->data, node->data_size);
-            node_t *next = node->next;
-            free(node->data);
-            free(node);
-            node = next;
+            insert_element(new_table, node->key, node->data, node->data_size);
+            node = node->next;
         }
     }
 
-    free(old_nodes);
+    hash_table_t tmp;
+    memcpy(&tmp, table, sizeof(hash_table_t));
+    memcpy(table, new_table, sizeof(hash_table_t));
+    memcpy(new_table, &tmp, sizeof(hash_table_t));
+
+    delete_table(new_table);
 }
 
 void delete_element(hash_table_t *table, hkey_t key)
@@ -81,12 +75,12 @@ void delete_element(hash_table_t *table, hkey_t key)
         free(node->data);
         free(node);
 
-        if (prev_node == &table->nodes[hkey] && node->next == NULL) {
+        if (prev_node == &table->nodes[hkey] && prev_node->next == NULL) {
             --table->filled_buckets;
         }
     }
 
-    if (table->filled_buckets < table->size / 4 && table->size / 2 >= table->min_size) {
+    if (table->filled_buckets < table->size / 4 && table->size / 2 >= DEFAULT_SIZE) {
         resize_table(table, table->size / 2);
     }
 }
